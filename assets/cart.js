@@ -104,6 +104,7 @@ class CartItems extends HTMLElement {
   }
 
   updateQuantity(line, quantity, name, variantId) {
+    
     this.enableLoading(line);
 
     const body = JSON.stringify({
@@ -114,11 +115,12 @@ class CartItems extends HTMLElement {
     });
 
     fetch(`${routes.cart_change_url}`, { ...fetchConfig(), ...{ body } })
-      .then((response) => {
+      .then(async (response) => {
         return response.text();
       })
       .then((state) => {
         const parsedState = JSON.parse(state);
+       
         const quantityElement =
           document.getElementById(`Quantity-${line}`) || document.getElementById(`Drawer-quantity-${line}`);
         const items = document.querySelectorAll('.cart-item');
@@ -168,15 +170,36 @@ class CartItems extends HTMLElement {
         }
 
         publish(PUB_SUB_EVENTS.cartUpdate, { source: 'cart-items', cartData: parsedState, variantId: variantId });
+        this.adjust_bundle_product(parsedState);
       })
       .catch(() => {
-        this.querySelectorAll('.loading__spinner').forEach((overlay) => overlay.classList.add('hidden'));
+        this.querySelectorAll('.loading-overlay').forEach((overlay) => overlay.classList.add('hidden'));
         const errors = document.getElementById('cart-errors') || document.getElementById('CartDrawer-CartErrors');
         errors.textContent = window.cartStrings.error;
       })
       .finally(() => {
         this.disableLoading(line);
       });
+  }
+
+  adjust_bundle_product(parsedState){
+    
+    var items = parsedState.items;
+    var jacketPresent = false;
+    var handbagpresent = false;
+    for(var i=0 ; i<items.length; ++i){
+      if(items[i].variant_id == 40561721606230){
+        jacketPresent = true;
+      }
+      if(items[i].variant_id == 40562096504918){
+        handbagpresent = true;
+      }
+    }
+  
+    if(jacketPresent == true && handbagpresent == false){
+      var jacketLine = document.querySelector('[data-quantity-variant-id="40561721606230"]');
+      this.updateQuantity(jacketLine.dataset.index, 0);
+    }
   }
 
   updateLiveRegions(line, message) {
@@ -203,8 +226,8 @@ class CartItems extends HTMLElement {
     const mainCartItems = document.getElementById('main-cart-items') || document.getElementById('CartDrawer-CartItems');
     mainCartItems.classList.add('cart__items--disabled');
 
-    const cartItemElements = this.querySelectorAll(`#CartItem-${line} .loading__spinner`);
-    const cartDrawerItemElements = this.querySelectorAll(`#CartDrawer-Item-${line} .loading__spinner`);
+    const cartItemElements = this.querySelectorAll(`#CartItem-${line} .loading-overlay`);
+    const cartDrawerItemElements = this.querySelectorAll(`#CartDrawer-Item-${line} .loading-overlay`);
 
     [...cartItemElements, ...cartDrawerItemElements].forEach((overlay) => overlay.classList.remove('hidden'));
 
@@ -216,8 +239,8 @@ class CartItems extends HTMLElement {
     const mainCartItems = document.getElementById('main-cart-items') || document.getElementById('CartDrawer-CartItems');
     mainCartItems.classList.remove('cart__items--disabled');
 
-    const cartItemElements = this.querySelectorAll(`#CartItem-${line} .loading__spinner`);
-    const cartDrawerItemElements = this.querySelectorAll(`#CartDrawer-Item-${line} .loading__spinner`);
+    const cartItemElements = this.querySelectorAll(`#CartItem-${line} .loading-overlay`);
+    const cartDrawerItemElements = this.querySelectorAll(`#CartDrawer-Item-${line} .loading-overlay`);
 
     cartItemElements.forEach((overlay) => overlay.classList.add('hidden'));
     cartDrawerItemElements.forEach((overlay) => overlay.classList.add('hidden'));
@@ -244,3 +267,4 @@ if (!customElements.get('cart-note')) {
     }
   );
 }
+

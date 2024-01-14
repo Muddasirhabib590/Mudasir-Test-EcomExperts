@@ -24,7 +24,7 @@ if (!customElements.get('product-form')) {
 
         this.submitButton.setAttribute('aria-disabled', true);
         this.submitButton.classList.add('loading');
-        this.querySelector('.loading__spinner').classList.remove('hidden');
+        this.querySelector('.loading-overlay__spinner').classList.remove('hidden');
 
         const config = fetchConfig('javascript');
         config.headers['X-Requested-With'] = 'XMLHttpRequest';
@@ -43,7 +43,34 @@ if (!customElements.get('product-form')) {
 
         fetch(`${routes.cart_add_url}`, config)
           .then((response) => response.json())
-          .then((response) => {
+          .then(async (response) => {
+  
+
+            if(response.options_with_values[0].value == "Black" && response.options_with_values[1].value == "Medium"){
+              var cart = await fetch('/cart.js', {
+                credentials: 'same-origin',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Requested-With':'xmlhttprequest'
+                },
+                method: 'GET'
+              });
+              cart = await cart.json();
+              var add_free_product = true;
+              for(var i =0;i<cart.items.length;++i){
+                if(cart.items[i].variant_id == 40561721606230){
+                  add_free_product = false;
+                }
+              }
+              var addData = {
+                'id':40561721606230,
+                'quantity': 1
+              };
+              if(add_free_product){
+                add_bundle_product(addData);
+              }
+              
+            }
             if (response.status) {
               publish(PUB_SUB_EVENTS.cartError, {
                 source: 'product-form',
@@ -66,11 +93,7 @@ if (!customElements.get('product-form')) {
             }
 
             if (!this.error)
-              publish(PUB_SUB_EVENTS.cartUpdate, {
-                source: 'product-form',
-                productVariantId: formData.get('id'),
-                cartData: response,
-              });
+              publish(PUB_SUB_EVENTS.cartUpdate, { source: 'product-form', productVariantId: formData.get('id'), cartData: response });
             this.error = false;
             const quickAddModal = this.closest('quick-add-modal');
             if (quickAddModal) {
@@ -95,7 +118,7 @@ if (!customElements.get('product-form')) {
             this.submitButton.classList.remove('loading');
             if (this.cart && this.cart.classList.contains('is-empty')) this.cart.classList.remove('is-empty');
             if (!this.error) this.submitButton.removeAttribute('aria-disabled');
-            this.querySelector('.loading__spinner').classList.add('hidden');
+            this.querySelector('.loading-overlay__spinner').classList.add('hidden');
           });
       }
 
@@ -116,3 +139,24 @@ if (!customElements.get('product-form')) {
     }
   );
 }
+
+
+function add_bundle_product(addData){
+  fetch('/cart/add.js', {
+    body: JSON.stringify(addData),
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With':'xmlhttprequest'
+    },
+    method: 'POST'
+  }).then(function(response) {
+    return response.json();
+  }).then(function(json) {
+   
+  }).catch(function(err) {
+   
+    console.error(err)
+  });
+}
+
